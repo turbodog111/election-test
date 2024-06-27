@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2024 Election Map</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .tabs {
+            overflow: hidden;
+            background: #f1f1f1;
+        }
+        .tabs button {
+            background: inherit;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+        }
+        .tabs button:hover {
+            background: #ddd;
+        }
+        .tabs button.active {
+            background: #ccc;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+        }
+        .column {
+            width: 45%;
+        }
+        .column h2 {
+            text-align: center;
+        }
+        .state, .senate-race {
+            display: flex;
+            flex-direction: column;
+            padding: 5px;
+            border-bottom: 1px solid #ccc;
+            position: relative;
+        }
+        .state button, .senate-race button {
+            margin-left: 10px;
+        }
+        .totals {
+            text-align: center;
+            font-size: 1.2em;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            display: flex;
+            position: relative;
+            width: 100%;
+            height: 30px;
+            margin-top: 20px;
+            background-color: lightgray;
+        }
+        .progress-dem {
+            background-color: blue;
+            color: white;
+            text-align: center;
+            line-height: 30px;
+            order: 0;
+        }
+        .progress-rep {
+            background-color: red;
+            color: white;
+            text-align: center;
+            line-height: 30px;
+            order: 2;
+            margin-left: auto;
+        }
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: black;
+        }
+        .progress-bar span {
+            position: absolute;
+            left: 50%;
+            top: -20px;
+            transform: translateX(-50%);
+            color: black;
+            font-weight: bold;
+        }
+        .dem-background {
+            background-color: blue;
+            color: white;
+        }
+        .rep-background {
+            background-color: red;
+            color: white;
+        }
+        .winner-check {
+            font-size: 1.2em;
+            color: green;
+            margin-left: 10px;
+        }
+        .flipped::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(255, 255, 0, 0.5),
+                rgba(255, 255, 0, 0.5) 5px,
+                transparent 5px,
+                transparent 10px
+            );
+            z-index: 1;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        .senate-container {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .form-container input {
+            margin: 10px;
+        }
+        .form-container button {
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>2024 Election Map</h1>
+    <div class="tabs">
+        <button class="tablinks" onclick="openTab(event, 'Presidential')" id="defaultTab">Presidential</button>
+        <button class="tablinks" onclick="openTab(event, 'Senate')">Senate</button>
+    </div>
+
+    <div id="Presidential" class="tab-content">
+        <div class="totals">
+            <span id="demTotal">Democrat: 0</span> | <span id="repTotal">Republican: 0</span>
+        </div>
+        <div class="progress-bar">
+            <span>270</span>
+            <div id="demProgress" class="progress-dem" style="width: 0%;">0</div>
+            <div id="repProgress" class="progress-rep" style="width: 0%;">0</div>
+        </div>
+        <div class="container">
+            <div class="column" id="demColumn">
+                <h2>Democrat</h2>
+            </div>
+            <div class="column" id="repColumn">
+                <h2>Republican</h2>
+            </div>
+        </div>
+        <div>
+            <h3>States</h3>
+            <div id="statesList">
+                <!-- States will be populated here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <div id="Senate" class="tab-content">
+        <div class="totals">
+            <span id="demSenateTotal">Democrat: 28</span> | <span id="repSenateTotal">Republican: 39</span>
+        </div>
+        <div class="senate-container">
+            <h3>Senate Races</h3>
+            <div id="senateRacesList">
+                <!-- Senate races will be populated here by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <h2>Save Your Predictions</h2>
+        <input type="text" id="username" placeholder="Enter your name" />
+        <button onclick="savePredictions()">Save Predictions</button>
+        <button onclick="loadPredictions()">Load Predictions</button>
+    </div>
+
+    <script>
+        const states = [
+            { name: 'Alabama', votes: 9, party: 'rep' },
+            { name: 'Alaska', votes: 3, party: 'rep' },
+            { name: 'Arizona', votes: 11, party: 'dem', flipped: true },
+            { name: 'Arkansas', votes: 6, party: 'rep' },
+            { name: 'California', votes: 54, party: 'dem' },
+            { name: 'Colorado', votes: 10, party: 'dem' },
+            { name: 'Connecticut', votes: 7, party: 'dem' },
+            { name: 'Delaware', votes: 3, party: 'dem' },
+            { name: 'District of Columbia', votes: 3, party: 'dem' },
+            { name: 'Florida', votes: 30, party: 'rep', flipped: true },
+            { name: 'Georgia', votes: 16, party: 'dem', flipped: true },
+            { name: 'Hawaii', votes: 4, party: 'dem' },
+            { name: 'Idaho', votes: 4, party: 'rep' },
+            { name: 'Illinois', votes: 19, party: 'dem' },
+            { name: 'Indiana', votes: 11, party: 'rep' },
+            { name: 'Iowa', votes: 6, party: 'rep' },
+            { name: 'Kansas', votes: 6, party: 'rep' },
+            { name: 'Kentucky', votes: 8, party: 'rep' },
+            { name: 'Louisiana', votes: 8, party: 'rep' },
+            { name: 'Maine At-Large', votes: 2, party: 'dem' },
+            { name: 'Maine CD-1', votes: 1, party: 'dem' },
+            { name: 'Maine CD-2', votes: 1, party: 'rep' },
+            { name: 'Maryland', votes: 10, party: 'dem' },
+            { name: 'Massachusetts', votes: 11, party: 'dem' },
+            { name: 'Michigan', votes: 15, party: 'dem' },
+            { name: 'Minnesota', votes: 10, party: 'dem' },
+            { name: 'Mississippi', votes: 6, party: 'rep' },
+            { name: 'Missouri', votes: 10, party: 'rep' },
+            { name: 'Montana', votes: 4, party: 'rep' },
+            { name: 'Nebraska At-Large', votes: 2, party: 'rep' },
+            { name: 'Nebraska CD-1', votes: 1, party: 'rep' },
+            { name: 'Nebraska CD-2', votes: 1, party: 'dem', flipped: true },
+            { name: 'Nebraska CD-3', votes: 1, party: 'rep' },
+            { name: 'Nevada', votes: 6, party: 'dem' },
+            { name: 'New Hampshire', votes: 4, party: 'dem' },
+            { name: 'New Jersey', votes: 14, party: 'dem' },
+            { name: 'New Mexico', votes: 5, party: 'dem' },
+            { name: 'New York', votes: 28, party: 'dem' },
+            { name: 'North Carolina', votes: 16, party: 'rep' },
+            { name: 'North Dakota', votes: 3, party: 'rep' },
+            { name: 'Ohio', votes: 17, party: 'rep' },
+            { name: 'Oklahoma', votes: 7, party: 'rep' },
+            { name: 'Oregon', votes: 8, party: 'dem' },
+            { name: 'Pennsylvania', votes: 19, party: 'dem', flipped: true },
+            { name: 'Rhode Island', votes: 4, party: 'dem' },
+            { name: 'South Carolina', votes: 9, party: 'rep' },
+            { name: 'South Dakota', votes: 3, party: 'rep' },
+            { name: 'Tennessee', votes: 11, party: 'rep' },
+            { name: 'Texas', votes: 40, party: 'rep' },
+            { name: 'Utah', votes: 6, party: 'rep' },
+            { name: 'Vermont', votes: 3, party: 'dem' },
+            { name: 'Virginia', votes: 13, party: 'dem' },
+            { name: 'Washington', votes: 12, party: 'dem' },
+            { name: 'West Virginia', votes: 4, party: 'rep' },
+            { name: 'Wisconsin', votes: 10, party: 'dem', flipped: true },
+            { name: 'Wyoming', votes: 3, party: 'rep' }
+        ];
+
+        const senateRaces = [
+            { state: 'Florida', candidates: [{ name: 'TBD', party: 'REP', incumbent: true }, { name: 'TBD', party: 'DEM' }], flipped: true },
+            { state: 'Indiana', candidates: [{ name: 'Jim Banks', party: 'REP', incumbent: true }, { name: 'Valerie McCray', party: 'DEM' }], flipped: true },
+            { state: 'Mississippi', candidates: [{ name: 'Roger Wicker', party: 'REP', incumbent: true }, { name: 'Ty Pinkins', party: 'DEM' }] },
+            { state: 'Missouri', candidates: [{ name: 'Josh Hawley', party: 'REP', incumbent: true }, { name: 'TBD', party: 'DEM' }], flipped: true },
+            { state: 'Nebraska', candidates: [{ name: 'Deb Fischer', party: 'REP', incumbent: true }, { name: 'Dan Osborn', party: 'IND' }] },
+            { state: 'North Dakota', candidates: [{ name: 'Kevin Cramer', party: 'REP', incumbent: true }, { name: 'Katrina Christiansen', party: 'DEM-NPL' }], flipped: true },
+            { state: 'Tennessee', candidates: [{ name: 'TBD', party: 'REP', incumbent: true }, { name: 'TBD', party: 'DEM' }] },
+            { state: 'Texas', candidates: [{ name: 'Ted Cruz', party: 'REP', incumbent: true }, { name: 'Colin Allred', party: 'DEM' }] },
+            { state: 'Utah', candidates: [{ name: 'John Curtis', party: 'REP', incumbent: false }, { name: 'Caroline Gleich', party: 'DEM' }] },
+            { state: 'Wyoming', candidates: [{ name: 'TBD', party: 'REP', incumbent: true }, { name: 'Scott Morrow', party: 'DEM' }] },
+            { state: 'Arizona', candidates: [{ name: 'Ruben Gallego', party: 'DEM', incumbent: false }, { name: 'TBD', party: 'REP' }], flipped: true },
+            { state: 'California', candidates: [{ name: 'Adam Schiff', party: 'DEM', incumbent: false }, { name: 'Steve Garvey', party: 'REP' }] },
+            { state: 'Connecticut', candidates: [{ name: 'TBD', party: 'DEM', incumbent: true }, { name: 'TBD', party: 'REP' }] },
+            { state: 'Delaware', candidates: [{ name: 'TBD', party: 'DEM', incumbent: false }, { name: 'TBD', party: 'REP' }] },
+            { state: 'Hawaii', candidates: [{ name: 'TBD', party: 'DEM', incumbent: true }, { name: 'TBD', party: 'REP' }] },
+            { state: 'Maine', candidates: [{ name: 'Angus King', party: 'IND', incumbent: true }, { name: 'Demitroula Kouzounas', party: 'REP' }, { name: 'David Costello', party: 'DEM' }] },
+            { state: 'Maryland', candidates: [{ name: 'Angela Alsobrooks', party: 'DEM', incumbent: false }, { name: 'Larry Hogan', party: 'REP' }] },
+            { state: 'Massachusetts', candidates: [{ name: 'TBD', party: 'DEM', incumbent: true }, { name: 'TBD', party: 'REP' }] },
+            { state: 'Michigan', candidates: [{ name: 'TBD', party: 'DEM', incumbent: false }, { name: 'TBD', party: 'REP' }] },
+            { state: 'Minnesota', candidates: [{ name: 'TBD', party: 'DFL', incumbent: true }, { name: 'TBD', party: 'REP' }] },
+            { state: 'Montana', candidates: [{ name: 'Jon Tester', party: 'DEM', incumbent: true }, { name: 'Tim Sheehy', party: 'REP' }] },
+            { state: 'Nevada', candidates: [{ name: 'Jacky Rosen', party: 'DEM', incumbent: true }, { name: 'Sam Brown', party: 'REP' }], flipped: true },
+            { state: 'New Jersey', candidates: [{ name: 'Bob Menendez', party: 'IND', incumbent: true }, { name: 'Andy Kim', party: 'DEM' }, { name: 'Curtis Bashaw', party: 'REP' }] },
+            { state: 'New Mexico', candidates: [{ name: 'Martin Heinrich', party: 'DEM', incumbent: true }, { name: 'Nella Domenici', party: 'REP' }] },
+            { state: 'New York', candidates: [{ name: 'Kirsten Gillibrand', party: 'DEM', incumbent: true }, { name: 'Mike Sapraicone', party: 'REP' }] },
+            { state: 'Ohio', candidates: [{ name: 'Sherrod Brown', party: 'DEM', incumbent: true }, { name: 'Bernie Moreno', party: 'REP' }] },
+            { state: 'Pennsylvania', candidates: [{ name: 'Bob Casey Jr.', party: 'DEM', incumbent: true }, { name: 'David McCormick', party: 'REP' }] },
+            { state: 'Rhode Island', candidates: [{ name: 'TBD', party: 'DEM', incumbent: true }, { name: 'TBD', party: 'REP' }] },
+            { state: 'Vermont', candidates: [{ name: 'Bernie Sanders', party: 'IND', incumbent: true }, { name: 'Gerald Malloy', party: 'REP' }] },
+            { state: 'Virginia', candidates: [{ name: 'Tim Kaine', party: 'DEM', incumbent: true }, { name: 'Hung Cao', party: 'REP' }] },
+            { state: 'Washington', candidates: [{ name: 'TBD', party: 'DEM', incumbent: true }, { name: 'TBD', party: 'REP' }] },
+            { state: 'West Virginia', candidates: [{ name: 'Glenn Elliott', party: 'DEM', incumbent: false }, { name: 'Jim Justice', party: 'REP' }] },
+            { state: 'Wisconsin', candidates: [{ name: 'Tammy Baldwin', party: 'DEM', incumbent: true }, { name: 'TBD', party: 'REP' }] },
+            { state: 'Nebraska Special', candidates: [{ name: 'Pete Ricketts', party: 'REP', incumbent: false }, { name: 'Preston Love Jr.', party: 'DEM' }] }
+        ];
+
+        let demTotal = 0;
+        let repTotal = 0;
+
+        let demSenateTotal = 28;
+        let repSenateTotal = 39;
+
+        function updateTotals() {
+            document.getElementById('demTotal').textContent = `Democrat: ${demTotal}`;
+            document.getElementById('repTotal').textContent = `Republican: ${repTotal}`;
+
+            let demPercent = (demTotal / 538) * 100;
+            let repPercent = (repTotal / 538) * 100;
+
+            document.getElementById('demProgress').style.width = `${demPercent}%`;
+            document.getElementById('demProgress').textContent = demTotal;
+            document.getElementById('repProgress').style.width = `${repPercent}%`;
+            document.getElementById('repProgress').textContent = repTotal;
+            document.getElementById('repProgress').style.marginLeft = `${100 - repPercent}%`;
+
+            if (demTotal >= 270) {
+                document.getElementById('demTotal').innerHTML += '<span class="winner-check">✔️</span>';
+            } else if (repTotal >= 270) {
+                document.getElementById('repTotal').innerHTML += '<span class="winner-check">✔️</span>';
+            }
+        }
+
+        function updateSenateTotals() {
+            document.getElementById('demSenateTotal').textContent = `Democrat: ${demSenateTotal}`;
+            document.getElementById('repSenateTotal').textContent = `Republican: ${repSenateTotal}`;
+        }
+
+        function createStateElement(state) {
+            const stateDiv = document.createElement('div');
+            stateDiv.className = 'state';
+            stateDiv.innerHTML = `
+                <span>${state.name} (${state.votes})</span>
+                <button onclick="markState('${state.name}', ${state.votes}, 'DEM', this, ${state.party === 'rep'})">DEM</button>
+                <button onclick="markState('${state.name}', ${state.votes}, 'REP', this, ${state.party === 'dem'})">REP</button>
+            `;
+            return stateDiv;
+        }
+
+        function createSenateRaceElement(race) {
+            const raceDiv = document.createElement('div');
+            raceDiv.className = 'senate-race';
+            raceDiv.setAttribute('data-state', race.state);
+            const candidatesList = race.candidates.map(candidate => `
+                <div>${candidate.name} (${candidate.party}${candidate.incumbent ? ', Incumbent' : ''})</div>
+                <button onclick="assignWinner('${race.state}', '${candidate.party}', ${candidate.incumbent}, this, ${race.flipped})">${candidate.party.charAt(0).toUpperCase() + candidate.party.slice(1).toUpperCase()}</button>
+            `).join('');
+            raceDiv.innerHTML = `
+                <div>${race.state}</div>
+                <div>${candidatesList}</div>
+            `;
+            return raceDiv;
+        }
+
+        function markState(name, votes, party, btn, flipped) {
+            const stateDiv = btn.parentElement;
+            stateDiv.remove();
+
+            const column = party === 'DEM' ? document.getElementById('demColumn') : document.getElementById('repColumn');
+            const newStateDiv = document.createElement('div');
+            const isFlipped = (party === 'REP' && flipped) || (party === 'DEM' && flipped);
+            newStateDiv.className = `state ${party === 'DEM' ? 'dem-background' : 'rep-background'} ${isFlipped ? 'flipped' : ''}`;
+            newStateDiv.style.position = 'relative';
+            newStateDiv.innerHTML = `${name} (${votes}) <button onclick="unmarkState('${name}', ${votes}, this, ${flipped})">Undo</button>`;
+
+            if (party === 'DEM') {
+                demTotal += votes;
+            } else {
+                repTotal += votes;
+            }
+
+            column.appendChild(newStateDiv);
+            updateTotals();
+        }
+
+        function assignWinner(state, party, incumbent, btn, flipped) {
+            const raceDiv = btn.closest('.senate-race');
+            raceDiv.remove();
+
+            const column = party === 'DEM' ? document.getElementById('demColumn') : document.getElementById('repColumn');
+            const newStateDiv = document.createElement('div');
+            newStateDiv.className = `senate-race ${party === 'DEM' ? 'dem-background' : 'rep-background'} ${flipped ? 'flipped' : ''}`;
+            newStateDiv.style.position = 'relative';
+            newStateDiv.innerHTML = `${state} <button onclick="undoWinner('${state}', '${party}', this, ${flipped})">Undo</button>`;
+
+            if (party === 'DEM') {
+                demSenateTotal += 1;
+            } else {
+                repSenateTotal += 1;
+            }
+
+            column.appendChild(newStateDiv);
+            updateSenateTotals();
+        }
+
+        function unmarkState(name, votes, btn, flipped) {
+            const stateDiv = btn.parentElement;
+            const party = stateDiv.classList.contains('dem-background') ? 'DEM' : 'REP';
+            stateDiv.remove();
+
+            const stateList = document.getElementById('statesList');
+            const newStateDiv = createStateElement({ name, votes, party: flipped ? (party === 'DEM' ? 'REP' : 'DEM') : party });
+            stateList.appendChild(newStateDiv);
+
+            if (party === 'DEM') {
+                demTotal -= votes;
+            } else {
+                repTotal -= votes;
+            }
+
+            updateTotals();
+            sortStatesList();
+        }
+
+        function undoWinner(state, party, btn, flipped) {
+            const raceDiv = btn.closest('.senate-race');
+            raceDiv.remove();
+
+            const race = senateRaces.find(r => r.state === state);
+            const newRaceDiv = createSenateRaceElement(race);
+            document.getElementById('senateRacesList').appendChild(newRaceDiv);
+
+            if (party === 'DEM') {
+                demSenateTotal -= 1;
+            } else {
+                repSenateTotal -= 1;
+            }
+
+            updateSenateTotals();
+            sortSenateRacesList();
+        }
+
+        function sortStatesList() {
+            const statesList = document.getElementById('statesList');
+            const stateElements = Array.from(statesList.children);
+            stateElements.sort((a, b) => a.getAttribute('data-name').localeCompare(b.getAttribute('data-name')));
+            stateElements.forEach(el => statesList.appendChild(el));
+        }
+
+        function sortSenateRacesList() {
+            const senateRacesList = document.getElementById('senateRacesList');
+            const raceElements = Array.from(senateRacesList.children);
+            raceElements.sort((a, b) => a.getAttribute('data-state').localeCompare(b.getAttribute('data-state')));
+            raceElements.forEach(el => senateRacesList.appendChild(el));
+        }
+
+        function populateStates() {
+            const statesList = document.getElementById('statesList');
+            states.forEach(state => {
+                const stateElement = createStateElement(state);
+                stateElement.setAttribute('data-name', state.name);
+                statesList.appendChild(stateElement);
+            });
+            sortStatesList();
+        }
+
+        function populateSenateRaces() {
+            const senateRacesList = document.getElementById('senateRacesList');
+            senateRaces.forEach(race => {
+                const raceElement = createSenateRaceElement(race);
+                raceElement.setAttribute('data-state', race.state);
+                senateRacesList.appendChild(raceElement);
+            });
+            sortSenateRacesList();
+        }
+
+        function savePredictions() {
+            const username = document.getElementById('username').value;
+            if (!username) {
+                alert('Please enter your name to save predictions.');
+                return;
+            }
+
+            const predictions = {
+                demTotal,
+                repTotal,
+                demSenateTotal,
+                repSenateTotal,
+                demStates: Array.from(document.getElementById('demColumn').children).map(el => el.innerText),
+                repStates: Array.from(document.getElementById('repColumn').children).map(el => el.innerText),
+                demSenateRaces: Array.from(document.getElementById('demColumn').children).map(el => el.innerText),
+                repSenateRaces: Array.from(document.getElementById('repColumn').children).map(el => el.innerText),
+            };
+
+            localStorage.setItem(username, JSON.stringify(predictions));
+            alert('Predictions saved!');
+        }
+
+        function loadPredictions() {
+            const username = prompt('Enter your name to load predictions:');
+            const savedPredictions = localStorage.getItem(username);
+
+            if (!savedPredictions) {
+                alert('No predictions found for this name.');
+                return;
+            }
+
+            const predictions = JSON.parse(savedPredictions);
+
+            demTotal = predictions.demTotal;
+            repTotal = predictions.repTotal;
+            demSenateTotal = predictions.demSenateTotal;
+            repSenateTotal = predictions.repSenateTotal;
+
+            document.getElementById('demColumn').innerHTML = '';
+            document.getElementById('repColumn').innerHTML = '';
+
+            predictions.demStates.forEach(state => {
+                const newStateDiv = document.createElement('div');
+                newStateDiv.className = 'state dem-background';
+                newStateDiv.innerHTML = state + '<button onclick="unmarkState()">Undo</button>';
+                document.getElementById('demColumn').appendChild(newStateDiv);
+            });
+
+            predictions.repStates.forEach(state => {
+                const newStateDiv = document.createElement('div');
+                newStateDiv.className = 'state rep-background';
+                newStateDiv.innerHTML = state + '<button onclick="unmarkState()">Undo</button>';
+                document.getElementById('repColumn').appendChild(newStateDiv);
+            });
+
+            updateTotals();
+            updateSenateTotals();
+        }
+
+        function openTab(evt, tabName) {
+            const tabContent = document.getElementsByClassName('tab-content');
+            for (let i = 0; i < tabContent.length; i++) {
+                tabContent[i].style.display = 'none';
+            }
+
+            const tabLinks = document.getElementsByClassName('tablinks');
+            for (let i = 0; i < tabLinks.length; i++) {
+                tabLinks[i].className = tabLinks[i].className.replace(' active', '');
+            }
+
+            document.getElementById(tabName).style.display = 'block';
+            evt.currentTarget.className += ' active';
+        }
+
+        document.getElementById('defaultTab').click();
+        populateStates();
+        populateSenateRaces();
+    </script>
+</body>
+</html>
