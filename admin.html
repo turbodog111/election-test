@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - 2024 Election Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .state {
+            padding: 5px;
+            margin: 5px;
+            border: 1px solid #ccc;
+        }
+        .dem {
+            background-color: blue;
+            color: white;
+        }
+        .rep {
+            background-color: red;
+            color: white;
+        }
+        .undecided {
+            background-color: lightgray;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        .column {
+            width: 45%;
+        }
+        .totals {
+            text-align: center;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin - 2024 Election Tracker</h1>
+    <div class="totals">
+        <p>Democrat: <span id="demVotes">0</span></p>
+        <p>Republican: <span id="repVotes">0</span></p>
+    </div>
+    <div id="statesList">
+        <!-- States will be dynamically added here -->
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const states = [
+            { name: 'Alabama', votes: 9 },
+            { name: 'Alaska', votes: 3 },
+            // Add all other states here...
+            { name: 'Wyoming', votes: 3 }
+        ];
+
+        const stateStatus = {};
+
+        const statesList = document.getElementById('statesList');
+
+        function updateVotes() {
+            const demVotes = Object.values(stateStatus).filter(status => status === 'dem').reduce((total, votes) => total + votes, 0);
+            const repVotes = Object.values(stateStatus).filter(status => status === 'rep').reduce((total, votes) => total + votes, 0);
+            document.getElementById('demVotes').textContent = demVotes;
+            document.getElementById('repVotes').textContent = repVotes;
+        }
+
+        function renderStates() {
+            statesList.innerHTML = '';
+            states.forEach(state => {
+                const stateDiv = document.createElement('div');
+                stateDiv.className = `state ${stateStatus[state.name] || 'undecided'}`;
+                stateDiv.textContent = `${state.name} (${state.votes})`;
+                stateDiv.addEventListener('click', () => {
+                    const newStatus = prompt(`Enter new status for ${state.name} (undecided, dem, rep)`, stateStatus[state.name] || 'undecided');
+                    if (newStatus) {
+                        stateStatus[state.name] = newStatus;
+                        stateDiv.className = `state ${newStatus}`;
+                        updateVotes();
+                        socket.emit('updateStatus', { name: state.name, party: newStatus, votes: state.votes });
+                    }
+                });
+                statesList.appendChild(stateDiv);
+            });
+        }
+
+        renderStates();
+
+        socket.on('statusUpdate', (data) => {
+            Object.keys(data.states).forEach(state => {
+                stateStatus[state] = data.states[state].party;
+            });
+            updateVotes();
+            renderStates();
+        });
+    </script>
+</body>
+</html>

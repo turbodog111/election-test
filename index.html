@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2024 Election Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .state {
+            padding: 5px;
+            margin: 5px;
+            border: 1px solid #ccc;
+        }
+        .dem {
+            background-color: blue;
+            color: white;
+        }
+        .rep {
+            background-color: red;
+            color: white;
+        }
+        .undecided {
+            background-color: lightgray;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        .column {
+            width: 45%;
+        }
+        .totals {
+            text-align: center;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <h1>2024 Election Tracker</h1>
+    <div class="totals">
+        <p>Democrat: <span id="demVotes">0</span></p>
+        <p>Republican: <span id="repVotes">0</span></p>
+    </div>
+    <div class="container">
+        <div class="column" id="demColumn">
+            <h2>Democrat</h2>
+        </div>
+        <div class="column" id="repColumn">
+            <h2>Republican</h2>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on('statusUpdate', (data) => {
+            document.getElementById('demVotes').textContent = data.demVotes;
+            document.getElementById('repVotes').textContent = data.repVotes;
+
+            const demColumn = document.getElementById('demColumn');
+            const repColumn = document.getElementById('repColumn');
+
+            demColumn.innerHTML = '<h2>Democrat</h2>';
+            repColumn.innerHTML = '<h2>Republican</h2>';
+
+            data.states.forEach(state => {
+                const stateDiv = document.createElement('div');
+                stateDiv.className = `state ${state.party}`;
+                stateDiv.textContent = `${state.name} (${state.votes})`;
+                if (state.party === 'dem') {
+                    demColumn.appendChild(stateDiv);
+                } else if (state.party === 'rep') {
+                    repColumn.appendChild(stateDiv);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
